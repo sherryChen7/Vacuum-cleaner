@@ -3,6 +3,9 @@ package Agents;
 import java.util.ArrayList;
 import java.util.List;
 
+import Algorithm.AStar;
+import Algorithm.AStarListener;
+import Algorithm.Node;
 import Grid.Coordinates;
 import Grid.Grid;
 
@@ -40,6 +43,10 @@ public class PathComputer implements Runnable {
 	 */
 	public synchronized void removeFirstPathElement() {
 		if (this.path.size() > 0) {this.path.remove(0);}
+	}
+	
+	public synchronized void clearPath() {
+		this.path.clear();
 	}
 	
 	/**
@@ -104,36 +111,52 @@ public class PathComputer implements Runnable {
 		}
 	}
 	
-	public synchronized void gonextroom(int x,int y) {
-		Node initialNode = new Node(x, y);
-		Node finalNode = new Node(20, 21);
-		if (x==12 && y==35) {//客廳終點
-          finalNode = new Node(20, 21); //洗衣間起點
-		} else if (x==20 && y==24) { //洗衣間終點
-		 finalNode = new Node(20,12); //臥室2起點
-		} else if (x==21 && y==19) {
-		 finalNode = new Node(16,9);
-		} else if (x==16 && y==4) {
-		  finalNode = new Node(16,4);
-		}
+	public synchronized void gonextroom(int x,int y, List<Coordinates> targets) {
+		Node initialNode = new Node(y, x);
 		
         int rows = this.grid.getSizeX();
         int cols = this.grid.getSizeY();
         //int[][] blocksArray1= this.grid.
-        AStar aStar = new AStar(rows, cols, initialNode, finalNode);
-//        int[][] blocksArray = new int[][]{{18,25},{19,25},{20,25},{21,25},{22,25},{23,25},{24,25},{25,25},{26,25},{27,25},{28,25},{29,25},{29,24},{29,23},{29,22},{29,21}, //客廳左牆
-//        	                             {19,22},{19,23},{19,24} //洗衣間隱牆
-//        	                             };
-        int[][] blocksArray = this.block_postion;
-        aStar.setBlocks(blocksArray);
-        List<Node> nextpath = aStar.findPath();
-        for (Node node : nextpath) {
+//        MapInfo mapInfo = new MapInfo();
+        AStar aStar = new AStar();
+        aStar.listener = new AStarListener() {
+			
+			@Override
+			public boolean canAddNodeToOpen(int x, int y) {
+				if (grid.getCase(y, x) != null) {
+					if (grid.getCase(y, x).isBlock()) {
+						return false;
+					}
+				} else {
+					return false;
+				}
+						
+				return true;
+			}
+		};
+
+		int minCost = 9999999;
+		List<Node> minCostPath = new ArrayList<>();
+        
+        for (Coordinates targetCoordinate : targets) {
+        	Node finalNode = new Node(targetCoordinate.y, targetCoordinate.x);
+        	List<Node> nextpath = aStar.start(initialNode, finalNode);
+        	if(nextpath.size() > 1) {
+        		Node end = nextpath.get(nextpath.size()-1);
+        		if(end.G < minCost) {
+        			minCost = end.G;
+        			minCostPath = nextpath;
+        		}
+        	}
+		}
+        
+        for (Node node : minCostPath) {
 //            System.out.println( "rows====" + node.getRow() + "   cols=====" + node.getCol());
         	//if(node.getRow()!=initialNode.getRow() && node.getCol() !=initialNode.getCol())
-            this.addToPath(new Coordinates(node.getRow(), node.getCol()));
+            this.addToPath(new Coordinates(node.coord.y, node.coord.x));
         }
-        System.out.println("gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()");
         
+        System.out.println("gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()gonextroom()");
 	}
 
 	@Override

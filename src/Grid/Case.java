@@ -10,6 +10,7 @@ public class Case {
 	private boolean block;
 	private boolean hide_block;
 	private boolean keypoint;
+	private boolean unknown;
 	
 	/** Default constructor
 	 */
@@ -20,7 +21,8 @@ public class Case {
 		this.charge = false;
 		this.block = false;
 		this.hide_block = false;
-		this.keypoint = false;		
+		this.keypoint = false;	
+		this.unknown = false;
 	}
 	
 	/**
@@ -48,6 +50,7 @@ public class Case {
 		this.hide_block = c.hide_block;
 		this.keypoint = c.keypoint;
 		this.charge=c.charge;
+		this.unknown = c.unknown;
 	}
 	
 	/**
@@ -125,6 +128,10 @@ public class Case {
 		return this.keypoint;
 	}
 	
+	public boolean isUnknown() {
+		return this.unknown ;
+	}
+	
 	/**
 	 * @param robot
 	 */
@@ -149,6 +156,21 @@ public class Case {
 	
 	public void setKeypoint(boolean keypoint) {
 		this.keypoint = keypoint;
+	}
+	
+	public void setUnknown(boolean unknown) {
+		this.unknown = unknown;
+	}
+	
+	public void setBy(Case c) {
+		this.dustLevel = c.dustLevel;
+		this.jewel = c.jewel;
+		this.robot = c.robot;
+		this.block = c.block;
+		this.hide_block = c.hide_block;
+		this.keypoint = c.keypoint;
+		this.charge=c.charge;
+		this.unknown = c.unknown;
 	}
 	
 	/** Overwriting of the toString method, debug use

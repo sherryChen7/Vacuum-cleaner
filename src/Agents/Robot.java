@@ -2,6 +2,7 @@ package Agents;
 
 import java.awt.Toolkit;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.ImageIcon;
@@ -17,11 +18,12 @@ public class Robot implements Runnable {
 	private Manor environment;
 	// ==========================
 	// Internal state information
+	private Sensor sensor;
 	private Grid map;
 	private PathComputer pathComputer;
 	private Coordinates position;
 	private int block_postion [][];
-	//private int maxRefreshRate = 20;
+//	private int maxRefreshRate = 20;
 	private int maxRefreshRate = 300;
 	private int refreshRate;
 	private float performance;
@@ -29,10 +31,19 @@ public class Robot implements Runnable {
 	private static int upordown = 0 ; //up =1 down = 0
 	private static int leftorright = 1; //left=0 right=1
 	private static int movemode = 0;
+	private Direction horizentalDir = Direction.RIGHT; 
+	private Direction verticalDir = Direction.DOWN;
 	// ==========================
 
 	public Robot(Manor environment) {
 		this.environment = environment;
+		this.sensor = new Sensor() {
+			
+			@Override
+			public Case senseMap(int x, int y) {
+				return environment.getRooms().getCase(x, y);
+			}
+		};
 		// The robot knows the map and its own position once it has scanned at least once the environment
 		this.map = null;
 		this.pathComputer = null;
@@ -85,6 +96,7 @@ public class Robot implements Runnable {
 			//generateDust(22, 26);
 			System.out.println( "dustlevel2222:" + map.getCase(22, 26).getDustLevel() );
 			this.position.move(dir);
+			this.map.getCase(this.position.x, this.position.y).setBy(sensor.senseMap(this.position.x, this.position.y));
 			this.map.getCase(this.position.x, this.position.y).setRobot(true);
 			this.nbActions++;
 			return true;
@@ -110,27 +122,72 @@ public class Robot implements Runnable {
 			//path =[16,4];
 		}
 		
-		if (((this.position.x==12 && this.position.y==35) || (this.position.x==20 && this.position.y==24)
-		  || (this.position.x==21 && this.position.y==19) || (this.position.x==16 && this.position.y==4 )) && movemode ==0) {
-			this.pathComputer.gonextroom(this.position.x,this.position.y);
-			movemode = 1;
+		if (movemode == 0 &&
+				(!this.isCaseUnknown(this.position.x+1, this.position.y) || this.isCaseBlock(this.position.x+1, this.position.y)) &&
+				(!this.isCaseUnknown(this.position.x-1, this.position.y) || this.isCaseBlock(this.position.x-1, this.position.y)) &&
+				(!this.isCaseUnknown(this.position.x, this.position.y+1) || this.isCaseBlock(this.position.x, this.position.y+1)) &&
+				(!this.isCaseUnknown(this.position.x, this.position.y-1) || this.isCaseBlock(this.position.x, this.position.y-1))) {
+			
+//			this.map.getCase(this.position.x+1, this.position.y).setBy(sensor.senseMap(this.position.x+1, this.position.y));
+//			this.map.getCase(this.position.x-1, this.position.y).setBy(sensor.senseMap(this.position.x-1, this.position.y));
+//			this.map.getCase(this.position.x, this.position.y+1).setBy(sensor.senseMap(this.position.x, this.position.y+1));
+//			this.map.getCase(this.position.x, this.position.y-1).setBy(sensor.senseMap(this.position.x, this.position.y-1));
+			
+			List<Coordinates> targetsCoordinate = new ArrayList<>();
+			for (int i = 0; i < map.getSizeX(); i++) {
+				for (int j = 0; j < map.getSizeY(); j++) {
+					Case tmp = map.getCase(i, j);
+					if (tmp.isUnknown() && 
+							(!(map.getCase(i-1, j) == null || map.getCase(i-1, j).isUnknown()) ||
+							!(map.getCase(i+1, j) == null || map.getCase(i+1, j).isUnknown()) ||
+							!(map.getCase(i, j-1) == null || map.getCase(i, j-1).isUnknown()) ||
+						    !(map.getCase(i, j+1) == null || map.getCase(i, j+1).isUnknown()))) {
+//					if (tmp.isUnknown()) {
+						targetsCoordinate.add(new Coordinates(i, j));
+					}
+				}
 			}
+			this.pathComputer.gonextroom(this.position.x,this.position.y, targetsCoordinate);
+			movemode = 1;
+		}
 		
 		if (path.size() > 0) {
 			Coordinates nextObjective = path.get(0);
 			int diffX = nextObjective.x - this.position.x;
 			if (diffX < 0) {
+				if(isCaseBlock(this.position.x + diffX ,this.position.y)) {
+					this.pathComputer.clearPath();
+					this.followPath();
+					return;
+				}
+						
 			this.move(Direction.UP);
 				return;
 			} else if (diffX > 0) {
+				if(isCaseBlock(this.position.x + diffX ,this.position.y)) {
+					this.pathComputer.clearPath();
+					this.followPath();
+					return;
+				}
+				
 				this.move(Direction.DOWN);
 				return;
 			} else {
 				int diffY = nextObjective.y - this.position.y;
 				if (diffY < 0) {
+					if(isCaseBlock(this.position.x,this.position.y + diffY)) {
+						this.pathComputer.clearPath();
+						this.followPath();
+						return;
+					}
 					this.move(Direction.LEFT);
 					return;
 				} else if (diffY > 0) {
+					if(isCaseBlock(this.position.x + diffX ,this.position.y + diffY)) {
+						this.pathComputer.clearPath();
+						this.followPath();
+						return;
+					}
 					this.move(Direction.RIGHT);
 					return;
 				} else {
@@ -148,97 +205,66 @@ public class Robot implements Runnable {
 			leftorright=1;
 		} else {		
 		//System.out.println( "DUST 12 30 "+ this.map.getCase(12,30).getDustLevel());
-		
-		if (upordown == 1) {//往上
-			if (this.map.getCase(this.position.x-1 ,this.position.y).isBlock()) { //上面那格
-				if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() && this.map.getCase(this.position.x ,this.position.y+1).isBlock()) { //左上右
-					this.move(Direction.DOWN);
-				}   else if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() ) { //上左
-					this.move(Direction.RIGHT);
-				}  else if (this.map.getCase(this.position.x ,this.position.y+1).isBlock() ) { //上右
-					this.move(Direction.LEFT);
-					leftorright=0;
-					upordown=0;
-				}   else { //上
-					if (leftorright==1 ) { //頭往右
-						if ( this.map.getCase(this.position.x ,this.position.y+1).getDustLevel() < 1) {
-					        this.move(Direction.RIGHT);
-					       } else {
-					    	this.move(Direction.LEFT);
-					    	leftorright = 0;
-					       }
-					}  else { //頭往左
-						System.out.println( "DUST!!!!!!!!!!! "+ this.map.getCase(this.position.x ,this.position.y-1).getDustLevel());
-						if ( this.map.getCase(this.position.x ,this.position.y-1).getDustLevel() < 1) {
-							this.move(Direction.LEFT); 	
-						} else {
-					    	this.move(Direction.RIGHT);
-					    	leftorright = 1;
-					       }
+			if (verticalDir == Direction.DOWN) {
+				if(isCaseBlockOrVisited(this.position.x + 1, this.position.y)) {
+					verticalDir = Direction.UP;
+					
+					if(isCaseBlockOrVisited(this.position.x, this.position.y + 1) && isCaseBlockOrVisited(this.position.x, this.position.y - 1)) {
+						move(verticalDir);
+					} else if (isCaseBlockOrVisited(this.position.x, this.position.y + 1)) {
+						horizentalDir = Direction.LEFT;
+						move(horizentalDir);
+					} else if (isCaseBlockOrVisited(this.position.x, this.position.y - 1)) {
+						horizentalDir = Direction.RIGHT;
+						move(horizentalDir);
+					} else {
+						move(horizentalDir);
 					}
-					upordown=0;
+				} else {
+					move(verticalDir);
 				}
-			 } else if (this.map.getCase(this.position.x+1,this.position.y).isBlock())  { //下面那格
-				 if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() && this.map.getCase(this.position.x ,this.position.y+1).isBlock()) { //左下右
-					 this.move(Direction.UP);
-				 } else if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() ) { //下左
-					 this.move(Direction.UP);
-				 }  else if (this.map.getCase(this.position.x ,this.position.y+1).isBlock() ) { //下右
-					 this.move(Direction.UP);
-				 } else {
-					 this.move(Direction.UP);
-				 }			 
-			 } else {
-				 if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() ) { //左
-				     this.move(Direction.UP);
-				 } else if (this.map.getCase(this.position.x ,this.position.y+1).isBlock() ) { //右
-					 this.move(Direction.UP);
-				 } else {
-					 living_room = living_room + 1;
-					 this.move(Direction.UP);
-				 }
-			 }
-		} else {//往下
-			if (this.map.getCase(this.position.x-1 ,this.position.y).isBlock()) { //上面那格
-				if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() && this.map.getCase(this.position.x ,this.position.y+1).isBlock()) { //左上右
-					this.move(Direction.DOWN);
-				}   else if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() ) { //上左
-					this.move(Direction.DOWN);
-				}  else if (this.map.getCase(this.position.x ,this.position.y+1).isBlock() ) { //上右
-					this.move(Direction.DOWN);
-				}   else { //上
-					this.move(Direction.DOWN);
-					upordown=0;
+			} else {
+				if(isCaseBlockOrVisited(this.position.x - 1, this.position.y)) {
+					verticalDir = Direction.DOWN;
+					
+					if(isCaseBlockOrVisited(this.position.x, this.position.y + 1) && isCaseBlockOrVisited(this.position.x, this.position.y - 1)) {
+						move(verticalDir);
+					} else if (isCaseBlockOrVisited(this.position.x, this.position.y + 1)) {
+						horizentalDir = Direction.LEFT;
+						move(horizentalDir);
+					} else if (isCaseBlockOrVisited(this.position.x, this.position.y - 1)) {
+						horizentalDir = Direction.RIGHT;
+						move(horizentalDir);
+					} else {
+						move(horizentalDir);
+					}
+				} else {
+					move(verticalDir);
 				}
-			 } else if (this.map.getCase(this.position.x+1,this.position.y).isBlock())  { //下面那格
-				 if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() && this.map.getCase(this.position.x ,this.position.y+1).isBlock()) { //左下右
-					 this.move(Direction.UP);
-				 } else if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() ) { //下左
-					 this.move(Direction.RIGHT);
-					 upordown=1;
-				 }  else if (this.map.getCase(this.position.x ,this.position.y+1).isBlock() ) { //下右
-					 this.move(Direction.LEFT);
-					 leftorright=0;
-					 upordown=1;
-				 } else {
-					 if (leftorright==1) {
-						 this.move(Direction.RIGHT);
-					 } else {
-						 this.move(Direction.LEFT); 
-					 }
-					 upordown=1;
-				 }			 
-			 } else {
-				 if (this.map.getCase(this.position.x ,this.position.y-1).isBlock() ) { //左
-				     this.move(Direction.DOWN);
-				 } else if (this.map.getCase(this.position.x ,this.position.y+1).isBlock() ) { //右
-					 this.move(Direction.DOWN);
-				 } else {
-					 this.move(Direction.DOWN);
-				 }
-			 }
+			}
+	    }	
+	}
+
+	private boolean isCaseBlockOrVisited(int x, int y) {
+		return (!this.isCaseUnknown(x, y)) || this.isCaseBlock(x, y);
+	}
+	
+	private boolean isCaseBlock(int x, int y) {
+		if(this.map.getCase(x, y)==null || this.map.getCase(x, y).isUnknown()) {
+			Case senseCase = sensor.senseMap(x, y);
+			if(senseCase==null) {
+				return true;
+			}
+			else if (senseCase.isBlock()) {
+				this.map.getCase(x, y).setBy(senseCase);
+			}
+			return senseCase.isBlock();
 		}
-	 }	
+		return this.map.getCase(x, y).isBlock();
+	}
+	
+	private boolean isCaseUnknown(int x, int y) {
+		return this.map.getCase(x, y)==null || this.map.getCase(x, y).isUnknown();
 	}
 
 	/** The robot chooses an action depending on its internal state, then does it
@@ -265,7 +291,8 @@ public class Robot implements Runnable {
 	/** The robot uses its sensors to observe the environment
 	 */
 	private void observeEnvironment() {
-		this.map = this.environment.getRoomsCopy();
+//		this.map = this.environment.getRoomsCopy();
+		this.map = new Grid(this.environment.getRooms().getSizeX(), this.environment.getRooms().getSizeY(), true);
 		this.position = this.environment.getRobotPosition();
 		this.block_postion = this.environment.getBlock();
 	}
@@ -307,15 +334,16 @@ public class Robot implements Runnable {
 	public void run() {
 		// Time between two actions of the robot
 		int sleepTime = 300;
-
+		this.observeEnvironment();
+		this.pathComputer = new PathComputer(this.map, this.position,this.block_postion);
 		// Remaining iterations before next internal state update
 		int beforeUpdate = 1;
 		// The robot runs permanently
 		while (true) {
 			// First, the robot asks the environment for a map, and updates its internal state
 			if (beforeUpdate <= 0) {
-				this.observeEnvironment();
-				this.updateState();
+				
+//				this.updateState();
 				beforeUpdate = this.refreshRate;
 			}
 			// Then, it chooses an action

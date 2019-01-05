@@ -6,6 +6,10 @@ public class Grid {
 	private Case [][] grid;
 
 	public Grid(int sizeX, int sizeY) {
+		this(sizeX, sizeY, false);
+	}
+	
+	public Grid(int sizeX, int sizeY, boolean isUnknown) {
 		this.sizeX = sizeX;
 		this.sizeY = sizeY;
 		this.grid = new Case[sizeX][sizeY];
@@ -13,6 +17,7 @@ public class Grid {
 		for (int i = 0; i < sizeX; i++) {
 			for (int j = 0; j < sizeY; j++) {
 				this.grid[i][j] = new Case();
+				this.grid[i][j].setUnknown(isUnknown);
 			}
 		}
 	}

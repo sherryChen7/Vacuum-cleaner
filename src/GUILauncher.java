@@ -1,6 +1,8 @@
 import Agents.Manor;
 import Agents.Robot;
+import Agents.Sensor;
 import GUI.GridFrame;
+import Grid.Case;
 
 public class GUILauncher {
 
@@ -9,12 +11,12 @@ public class GUILauncher {
 		Manor manor = new Manor(30,37);
 		// Creation of a new robot
 		Robot robot = new Robot(manor);
-		manor.setRobotPosition(20, 26);//ÃD¥Ø­ìÂI(«ÈÆU)
+		manor.setRobotPosition(20, 26);//ï¿½Dï¿½Ø­ï¿½ï¿½I(ï¿½ï¿½ï¿½U)
 		//manor.setRobotPosition(12, 34);
-		//manor.setRobotPosition(20, 21); //¬~¦ç¶¡
-		//manor.setRobotPosition(20, 12); //ª×«Ç2
-		//manor.setRobotPosition(16, 9); //ª×«Ç1
-		//manor.setRobotPosition(10, 10); //¿ûµ^©Ð
+		//manor.setRobotPosition(20, 21); //ï¿½~ï¿½ç¶¡
+		//manor.setRobotPosition(20, 12); //ï¿½×«ï¿½2
+		//manor.setRobotPosition(16, 9); //ï¿½×«ï¿½1
+		//manor.setRobotPosition(10, 10); //ï¿½ï¿½ï¿½^ï¿½ï¿½
 		manor.setChargePosition(22, 26);
 		manor.setBlock();
 		manor.setKeypoint();
