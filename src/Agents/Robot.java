@@ -22,7 +22,6 @@ public class Robot implements Runnable {
 	private Grid map;
 	private PathComputer pathComputer;
 	private Coordinates position;
-	private int block_postion [][];
 //	private int maxRefreshRate = 20;
 	private int maxRefreshRate = 300;
 	private int refreshRate;
@@ -109,96 +108,65 @@ public class Robot implements Runnable {
 	private void followPath() {
 		// Get the current value of the path from the path computer
 		ArrayList<Coordinates> path = this.pathComputer.getPath();
-		int living_room = 0;
-		// If there is at least one objective
-		// If there is no objective on the map, the robot doesn't move
-
-//		if (living_room == 12) {
-//			this.move(Direction.RIGHT);
-//		}
 		System.out.println(path);
 		
-		if (this.position.x==16 && this.position.y==4) {
-			//path =[16,4];
-		}
-		
+		/*
+		 * 如果四周都是已走過或不可走，就執行AStar找尋下一個未走過的點
+		 */
 		if (movemode == 0 &&
-				(!this.isCaseUnknown(this.position.x+1, this.position.y) || this.isCaseBlock(this.position.x+1, this.position.y)) &&
-				(!this.isCaseUnknown(this.position.x-1, this.position.y) || this.isCaseBlock(this.position.x-1, this.position.y)) &&
-				(!this.isCaseUnknown(this.position.x, this.position.y+1) || this.isCaseBlock(this.position.x, this.position.y+1)) &&
-				(!this.isCaseUnknown(this.position.x, this.position.y-1) || this.isCaseBlock(this.position.x, this.position.y-1))) {
-			
-//			this.map.getCase(this.position.x+1, this.position.y).setBy(sensor.senseMap(this.position.x+1, this.position.y));
-//			this.map.getCase(this.position.x-1, this.position.y).setBy(sensor.senseMap(this.position.x-1, this.position.y));
-//			this.map.getCase(this.position.x, this.position.y+1).setBy(sensor.senseMap(this.position.x, this.position.y+1));
-//			this.map.getCase(this.position.x, this.position.y-1).setBy(sensor.senseMap(this.position.x, this.position.y-1));
+				isCaseBlockOrVisited(this.position.x+1, this.position.y) &&
+				isCaseBlockOrVisited(this.position.x-1, this.position.y) &&
+				isCaseBlockOrVisited(this.position.x, this.position.y+1) &&
+				isCaseBlockOrVisited(this.position.x, this.position.y-1)) {
 			
 			List<Coordinates> targetsCoordinate = new ArrayList<>();
 			for (int i = 0; i < map.getSizeX(); i++) {
 				for (int j = 0; j < map.getSizeY(); j++) {
 					Case tmp = map.getCase(i, j);
+					/*
+					 * 刪減候選點(Unknown)策略，因為如果將所有候選點都進行AStar尋路，會大幅增加機器人負擔，
+					 * 所以此策略是將只有該候選點四周至少有一點是已知點才加入候選點群中。
+					 */
 					if (tmp.isUnknown() && 
-							(!(map.getCase(i-1, j) == null || map.getCase(i-1, j).isUnknown()) ||
-							!(map.getCase(i+1, j) == null || map.getCase(i+1, j).isUnknown()) ||
-							!(map.getCase(i, j-1) == null || map.getCase(i, j-1).isUnknown()) ||
-						    !(map.getCase(i, j+1) == null || map.getCase(i, j+1).isUnknown()))) {
-//					if (tmp.isUnknown()) {
-						targetsCoordinate.add(new Coordinates(i, j));
+							(!isCaseUnknown(i-1, j) ||
+							!isCaseUnknown(i+1, j) ||
+							!isCaseUnknown(i, j-1) ||
+						    !isCaseUnknown(i, j+1))) {
+						targetsCoordinate.add(new Coordinates(i, j)); //加入候選點群
 					}
 				}
 			}
-			this.pathComputer.gonextroom(this.position.x,this.position.y, targetsCoordinate);
+			this.pathComputer.gonextroom(this.position.x,this.position.y, targetsCoordinate); //從候選點群中找出最近的點
 			movemode = 1;
 		}
 		
 		if (path.size() > 0) {
 			Coordinates nextObjective = path.get(0);
+			this.pathComputer.removeFirstPathElement();
 			int diffX = nextObjective.x - this.position.x;
-			if (diffX < 0) {
-				if(isCaseBlock(this.position.x + diffX ,this.position.y)) {
-					this.pathComputer.clearPath();
-					this.followPath();
-					return;
-				}
-						
-			this.move(Direction.UP);
+			int diffY = nextObjective.y - this.position.y;
+			
+			if(diffX == 0 && diffY == 0) //it is self
 				return;
-			} else if (diffX > 0) {
-				if(isCaseBlock(this.position.x + diffX ,this.position.y)) {
-					this.pathComputer.clearPath();
-					this.followPath();
-					return;
-				}
-				
-				this.move(Direction.DOWN);
+			
+			if(diffX != 0 && !isCaseBlock(this.position.x + diffX ,this.position.y)) {
+				if(diffX < 0)
+					this.move(Direction.UP);
+				else if(diffX > 0)
+					this.move(Direction.DOWN);
 				return;
-			} else {
-				int diffY = nextObjective.y - this.position.y;
-				if (diffY < 0) {
-					if(isCaseBlock(this.position.x,this.position.y + diffY)) {
-						this.pathComputer.clearPath();
-						this.followPath();
-						return;
-					}
-					this.move(Direction.LEFT);
-					return;
-				} else if (diffY > 0) {
-					if(isCaseBlock(this.position.x + diffX ,this.position.y + diffY)) {
-						this.pathComputer.clearPath();
-						this.followPath();
-						return;
-					}
-					this.move(Direction.RIGHT);
-					return;
-				} else {
-					// If the next objective is the current case, removes it, and then calls the
-					// followPath again with the next objective
-					this.pathComputer.removeFirstPathElement();
-					this.followPath();
-					System.out.println("gggggggggggggggggggggg");
-					
-				}
 			}
+			
+			if(diffY != 0 && !isCaseBlock(this.position.x,this.position.y + diffY)) {
+				if (diffY < 0)
+					this.move(Direction.LEFT);
+				else if (diffY > 0)
+					this.move(Direction.RIGHT);
+				return;
+			}
+			
+			this.pathComputer.clearPath();
+			this.followPath();
 		} else if (path.size() == 0 && movemode ==1) {
 			movemode = 0;
 			upordown = 0;
@@ -271,7 +239,7 @@ public class Robot implements Runnable {
 	 */
 	private void chooseAction() {
 		if (this.map != null && this.position != null) {
-			Case currentCase = map.getCase(this.position.x, this.position.y);
+//			Case currentCase = map.getCase(this.position.x, this.position.y);
 			// If there is a jewel on the current case, according to the robot's copy of the map
 //			if (currentCase.hasJewel()) {
 //				this.pickJewel(this.position.x, this.position.y);
@@ -294,40 +262,7 @@ public class Robot implements Runnable {
 //		this.map = this.environment.getRoomsCopy();
 		this.map = new Grid(this.environment.getRooms().getSizeX(), this.environment.getRooms().getSizeY(), true);
 		this.position = this.environment.getRobotPosition();
-		this.block_postion = this.environment.getBlock();
-	}
-
-	/** The robot computes the path it has to follow, in a new thread
-	 */
-	private void updateState() {
-		this.pathComputer = new PathComputer(this.map, this.position,this.block_postion);
-		// Then the robot computes the path it has to follow, in a new thread
-	//	(new Thread(this.pathComputer)).start();
-		this.performanceMeasure();
-	}
-
-	/** Computes the performance of the robot over the last iterations
-	 */
-	private void performanceMeasure() {
-		float nextPerf = (float) this.environment.getLostPoints() / ((float) this.nbActions + 1);
-		//System.out.println("Perf : " + nextPerf);
-		float perfDiff = nextPerf - this.performance;
-		// If the robot has lost more points than during the previous cycle, decreases the refresh rate
-		if (perfDiff > 0 && this.refreshRate - 2 >= 1) {
-			this.refreshRate -= 2;
-			this.environment.notifyRefreshRateGUI(this.refreshRate);
-			//System.out.println("Decreasing refreshing rate.");
-		} else if (perfDiff == 0 && this.refreshRate < this.maxRefreshRate) {
-			this.refreshRate++;
-			this.environment.notifyRefreshRateGUI(this.refreshRate);
-			//System.out.println("Increasing refreshing rate.");
-		}
-		this.performance = nextPerf;
-		//System.out.println("Refresh rate : " + this.refreshRate);
-		// Reset the values used to measure performance
-		this.nbActions = 0;
-		this.environment.resetPoints();
-		this.environment.notifyRefreshRateGUI(this.refreshRate);
+		this.pathComputer = new PathComputer(this.map);
 	}
 
 	@Override
@@ -335,26 +270,15 @@ public class Robot implements Runnable {
 		// Time between two actions of the robot
 		int sleepTime = 300;
 		this.observeEnvironment();
-		this.pathComputer = new PathComputer(this.map, this.position,this.block_postion);
-		// Remaining iterations before next internal state update
-		int beforeUpdate = 1;
 		// The robot runs permanently
 		while (true) {
-			// First, the robot asks the environment for a map, and updates its internal state
-			if (beforeUpdate <= 0) {
-				
-//				this.updateState();
-				beforeUpdate = this.refreshRate;
-			}
-			// Then, it chooses an action
+			// chooses an action
 			this.chooseAction();
 			try {
 				TimeUnit.MILLISECONDS.sleep(sleepTime);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			beforeUpdate--;
-			//System.out.println("Before Update : " + beforeUpdate);
 		}
 	}
 
