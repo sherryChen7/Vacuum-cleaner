@@ -17,6 +17,7 @@ public class GridFrame extends JFrame{
 	private JLabel refreshLabel;
 	private JLabel jewelLabel;
 	private int lostJewels;
+	public static double power = 100.0;
 
 	private static final long serialVersionUID = 1L;
 
@@ -93,7 +94,7 @@ public class GridFrame extends JFrame{
 		this.add(this.jpanelRobot, BorderLayout.NORTH);
 		GridLayout gridLayoutRobot = new GridLayout(1, 2);
 		this.jpanelRobot.setLayout(gridLayoutRobot);
-		this.refreshLabel = new JLabel("<html>Power rate : " +  100 + "</html>", JLabel.CENTER);
+		this.refreshLabel = new JLabel("<html>Power rate : " +  power + "</html>", JLabel.CENTER);
 		this.formatLabel(this.refreshLabel);
 		this.jewelLabel = new JLabel("<html>&nbsp;&nbsp;Steps : " + this.lostJewels + "</html>", JLabel.CENTER);
 		this.formatLabel(this.jewelLabel);
