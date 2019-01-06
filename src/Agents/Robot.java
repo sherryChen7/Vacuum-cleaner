@@ -12,6 +12,7 @@ import Grid.Case;
 import Grid.Coordinates;
 import Grid.Direction;
 import Grid.Grid;
+import GUI.GridFrame;
 
 public class Robot implements Runnable {
 
@@ -50,6 +51,7 @@ public class Robot implements Runnable {
 		// The number of iterations between two use of the robot sensors
 		this.refreshRate = this.maxRefreshRate;
 		this.nbActions = 0;
+		
 	}
 	
 	private void addIcon(JLabel label, String iconPath) {
@@ -66,6 +68,8 @@ public class Robot implements Runnable {
 		// Modifies the internal state of the robot
 		this.map.getCase(x, y).removeDust();
 		this.nbActions++;
+		GUI.GridFrame.power -= 0.05;
+		System.out.println("suck");
 	}
 
 	/**
@@ -111,7 +115,7 @@ public class Robot implements Runnable {
 		System.out.println(path);
 		
 		/*
-		 * 如果四周都是已走過或不可走，就執行AStar找尋下一個未走過的點
+		 * 憒����撌脰粥����韏堆�停�銵Star�撠���韏圈����
 		 */
 		if (movemode == 0 &&
 				isCaseBlockOrVisited(this.position.x+1, this.position.y) &&
@@ -124,19 +128,19 @@ public class Robot implements Runnable {
 				for (int j = 0; j < map.getSizeY(); j++) {
 					Case tmp = map.getCase(i, j);
 					/*
-					 * 刪減候選點(Unknown)策略，因為如果將所有候選點都進行AStar尋路，會大幅增加機器人負擔，
-					 * 所以此策略是將只有該候選點四周至少有一點是已知點才加入候選點群中。
+					 * �皜�暺�(Unknown)蝑嚗�憒������暺�脰�Star撠楝嚗�之撟���鈭箄����
+					 * ��隞交迨蝑�撠��府�暺��撠��暺撌脩暺���暺黎銝准��
 					 */
 					if (tmp.isUnknown() && 
 							(!isCaseUnknown(i-1, j) ||
 							!isCaseUnknown(i+1, j) ||
 							!isCaseUnknown(i, j-1) ||
 						    !isCaseUnknown(i, j+1))) {
-						targetsCoordinate.add(new Coordinates(i, j)); //加入候選點群
+						targetsCoordinate.add(new Coordinates(i, j)); //���暺黎
 					}
 				}
 			}
-			this.pathComputer.gonextroom(this.position.x,this.position.y, targetsCoordinate); //從候選點群中找出最近的點
+			this.pathComputer.gonextroom(this.position.x,this.position.y, targetsCoordinate); //敺�暺黎銝剜���餈���
 			movemode = 1;
 		}
 		
@@ -239,6 +243,7 @@ public class Robot implements Runnable {
 	 */
 	private void chooseAction() {
 		if (this.map != null && this.position != null) {
+			GUI.GridFrame.power -= 0.01;
 //			Case currentCase = map.getCase(this.position.x, this.position.y);
 			// If there is a jewel on the current case, according to the robot's copy of the map
 //			if (currentCase.hasJewel()) {
@@ -272,6 +277,7 @@ public class Robot implements Runnable {
 		this.observeEnvironment();
 		// The robot runs permanently
 		while (true) {
+			System.out.println(GUI.GridFrame.power);
 			// chooses an action
 			this.chooseAction();
 			try {
